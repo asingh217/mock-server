@@ -2,11 +2,13 @@ package com.akki.mockserver.controller;
 
 import com.akki.mockserver.model.Environment;
 import com.akki.mockserver.model.MockService;
+import com.akki.mockserver.service.MockServerService;
 import com.akki.mockserver.util.JsonFileUtil;
 import com.google.gson.Gson;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,8 +16,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +28,9 @@ import org.graalvm.polyglot.Value;
 @Controller
 public class MockController {
 
+    @Autowired
+    private MockServerService mockServerService;
+
     private static final String ENV_FILE_PATH = "environments.json";
     private static final String SERVICE_FILE_PATH = "services.json";
 
@@ -38,52 +41,35 @@ public class MockController {
     // Display the Environments
     @GetMapping("/envs")
     public String getEnvironmentsPage(Model model) throws IOException {
-        List<Environment> environments = JsonFileUtil.readJsonFile(ENV_FILE_PATH, Environment.class);
+        List<Environment> environments = mockServerService.getEnvironments();
         model.addAttribute("environments", new Gson().toJson(environments));
         return "envList"; // Ensure this matches the name of your Thymeleaf template
     }
 
     @PostMapping("/envs")
-    public String addEnvironment(@RequestBody Environment request, Model model) throws IOException {
-        List<Environment> environments = JsonFileUtil.readJsonFile(ENV_FILE_PATH, Environment.class);
-        request.setId(UUID.randomUUID().toString());
-        environments.add(request);
-        JsonFileUtil.writeJsonFile(ENV_FILE_PATH, environments);
+    public String addEnvironment(@RequestBody Environment environment, Model model) throws IOException {
+        List<Environment> environments = mockServerService.getEnvironments();
+        environment.setId(UUID.randomUUID().toString());
+        environments.add(environment);
+        mockServerService.saveEnvironments(environments);
         model.addAttribute("environments", new Gson().toJson(environments));
         return "envList";
     }
-    
 
     @DeleteMapping("/envs/{id}")
     public String deleteEnvironment(@PathVariable String id, Model model) throws IOException {
-        List<Environment> environments = JsonFileUtil.readJsonFile(ENV_FILE_PATH, Environment.class);
+        List<Environment> environments = mockServerService.getEnvironments();
         environments = environments.stream()
                 .filter(env -> !env.getId().equals(id))
                 .collect(Collectors.toList());
-        JsonFileUtil.writeJsonFile(ENV_FILE_PATH, environments);
+        mockServerService.saveEnvironments(environments);
         model.addAttribute("environments", new Gson().toJson(environments));
         return "envList";
     }
 
-    // @GetMapping("/envs/search")
-    // @ResponseBody
-    // public List<Environment> searchEnvironments(@RequestParam String query) throws IOException {
-    //     List<Environment> environments = JsonFileUtil.readJsonFile(ENV_FILE_PATH, Environment.class);
-    //     return environments.stream()
-    //             .filter(env -> env.getEnv().toLowerCase().startsWith(query.toLowerCase()))
-    //             .collect(Collectors.toList());
-    // }
-
-    /*
-     * Services List
-     */
-
     @GetMapping("/envs/{env}/services")
     public String getServiceListPage(@PathVariable String env, Model model) throws IOException {
-        List<MockService> services = JsonFileUtil.readJsonFile(SERVICE_FILE_PATH, MockService.class);
-        services = services.stream()
-                .filter(service -> service.getEnv().equals(env))
-                .collect(Collectors.toList());
+        List<MockService> services = mockServerService.getServicesForEnv(env);
         model.addAttribute("env", env);
         model.addAttribute("services", new Gson().toJson(services));
         return "serviceList";
@@ -91,11 +77,11 @@ public class MockController {
 
     @PostMapping("/envs/{env}/services")
     public String addService(@PathVariable String env, @RequestBody MockService request, Model model) throws IOException {
-        List<MockService> services = JsonFileUtil.readJsonFile(SERVICE_FILE_PATH, MockService.class);
+        List<MockService> services = mockServerService.getServices();
         request.setId(UUID.randomUUID().toString());
         request.setEnv(env);
         services.add(request);
-        JsonFileUtil.writeJsonFile(SERVICE_FILE_PATH, services);
+        mockServerService.saveServices(services);
         model.addAttribute("env", env);
         model.addAttribute("services", new Gson().toJson(services));
         return "serviceList";
@@ -110,7 +96,7 @@ public class MockController {
 
     @PutMapping("/envs/{env}/services/{id}")
     public String editService(@PathVariable String env, @PathVariable String id, @RequestBody MockService request, Model model) throws IOException {
-        List<MockService> services = JsonFileUtil.readJsonFile(SERVICE_FILE_PATH, MockService.class);
+        List<MockService> services = mockServerService.getServices();
         int servicesTotalCount = services.size();
         services = services.stream()
             .filter(service -> !service.getId().equals(id))
@@ -120,7 +106,7 @@ public class MockController {
             request.setId(id);
             request.setEnv(env);
             services.add(request);
-            JsonFileUtil.writeJsonFile(SERVICE_FILE_PATH, services);
+            mockServerService.saveServices(services);
         }
         model.addAttribute("env", env);
         model.addAttribute("services", new Gson().toJson(services));
@@ -129,7 +115,7 @@ public class MockController {
 
     @GetMapping("/envs/{env}/services/{id}")
     public String getService(@PathVariable String env, @PathVariable String id, Model model) throws IOException {
-        List<MockService> services = JsonFileUtil.readJsonFile(SERVICE_FILE_PATH, MockService.class);
+        List<MockService> services = mockServerService.getServices();
         MockService mockService;
         try{
             mockService = services.stream()
@@ -148,26 +134,26 @@ public class MockController {
 
     @DeleteMapping("/envs/{env}/services/{id}")
     public String deleteService(@PathVariable String env, @PathVariable String id, Model model) throws IOException {
-        List<MockService> services = JsonFileUtil.readJsonFile(SERVICE_FILE_PATH, MockService.class);
+        List<MockService> services = mockServerService.getServices();
         services = services.stream()
                 .filter(service -> !service.getId().equals(id))
                 .collect(Collectors.toList());
-        JsonFileUtil.writeJsonFile(SERVICE_FILE_PATH, services);
+        mockServerService.saveServices(services);
         model.addAttribute("env", env);
         model.addAttribute("services", new Gson().toJson(services));
         return "serviceList";
     }
 
     @RequestMapping("envs/{env}/**")
-    public ResponseEntity<String> handleRequestBasedOnEnv(@PathVariable String env, HttpServletRequest request) throws IOException
-    { String requestURI = request.getRequestURI();
+    public ResponseEntity<String> handleRequestBasedOnEnv(
+        @PathVariable String env,
+        @RequestBody(required = false) String requestBody, // Accept the request body
+        HttpServletRequest request) throws IOException {
+        String requestURI = request.getRequestURI();
         String remainingPath = requestURI.substring(requestURI.indexOf(env) + env.length() + 1);
-        List<MockService> services = JsonFileUtil.readJsonFile(SERVICE_FILE_PATH, MockService.class);
-        Optional<MockService> matchingService = services.stream()
-            .filter(service -> service.getEnv().equals(env) 
-            && matchesPattern(service.getUrl(), remainingPath)
-            && service.getHttpMethod().equals(request.getMethod()))
-            .findFirst();
+
+        Optional<MockService> matchingService = mockServerService.getMatchingService(env, remainingPath, request.getMethod());
+
         if (matchingService.isPresent())
         {
             MockService service = matchingService.get();
@@ -177,30 +163,11 @@ public class MockController {
             });
             String responseBody = service.getResponseBody();
             if(service.getResponseBodyType().equals("dynamic"))
-                responseBody = evaluateResponse(responseBody);
+                responseBody = mockServerService.evaluateResponse(responseBody, requestBody);
             return new ResponseEntity<>(responseBody, headers, Integer.parseInt(service.getStatusCode()));
         } else {
             return new ResponseEntity<>("Service not found", HttpStatus.NOT_IMPLEMENTED);
         }
-    }
-
-    private String evaluateResponse(String script){
-        Value responseJson;
-        try (Context context = Context.create()) {
-            context.eval("js", script);
-            responseJson = context.getBindings("js").getMember("responseJson");
-            System.out.println(responseJson.asString());
-            return responseJson.asString();
-        } catch (Exception e) {
-            return e.getMessage() + ". Please check your javascript code for errors";
-        }
-    }
-
-    private boolean matchesPattern(String pattern, String url)
-    {
-        Pattern compiledPattern = Pattern.compile(pattern);
-        Matcher matcher = compiledPattern.matcher(url);
-        return matcher.matches();
     }
 
 }

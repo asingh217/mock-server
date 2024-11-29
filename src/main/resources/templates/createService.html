@@ -15,6 +15,7 @@
   <body>
     <div class="container">
       <h1>Mock Service Configuration</h1>
+      <br />
       <form id="serviceForm">
         <!-- Environment Textbox -->
         <div class="form-group">
@@ -42,28 +43,33 @@
           />
         </div>
 
-        <!-- HTTP Method List -->
-        <div class="form-group">
-          <label for="statusCode">HTTP Method</label>
-          <select class="form-control" id="statusCode" name="statusCode">
-            <option>200</option>
-            <option>201</option>
-            <option>202</option>
-            <option>400</option>
-            <option>404</option>
-            <option>500</option>
-          </select>
-        </div>
-
-        <!-- HTTP Method List -->
-        <div class="form-group">
-          <label for="httpMethod">HTTP Method</label>
-          <select class="form-control" id="httpMethod" name="httpMethod">
-            <option>GET</option>
-            <option>POST</option>
-            <option>PUT</option>
-            <option>DELETE</option>
-          </select>
+        <div class="row">
+          <div class="col">
+            <!-- HTTP Method List -->
+            <div class="form-group">
+              <label for="statusCode">Status Code</label>
+              <select class="form-control" id="statusCode" name="statusCode">
+                <option>200</option>
+                <option>201</option>
+                <option>202</option>
+                <option>400</option>
+                <option>404</option>
+                <option>500</option>
+              </select>
+            </div>
+          </div>
+          <div class="col">
+            <!-- HTTP Method List -->
+            <div class="form-group">
+              <label for="httpMethod">HTTP Method</label>
+              <select class="form-control" id="httpMethod" name="httpMethod">
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>DELETE</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- Response Headers Section -->
@@ -198,6 +204,7 @@
         });
         editorInstance.setValue(`
 function processResponse(){
+    var request = JSON.parse(requestBody);
     var response = {};
     return JSON.stringify(response);
 }
