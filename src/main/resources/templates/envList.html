@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <title>Environments</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" th:href="@{/css/mock-service.css}" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <br />
+      <h1>Environments</h1>
+      <hr />
+      <form>
+        <input type="hidden" id="environments" th:value="${environments}" />
+        <div class="form-group row">
+          <div class="col-md-8">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Add or Search Environments"
+              id="environment"
+              name="environment"
+              oninput="searchEnvironment()"
+            />
+          </div>
+          <div class="col-sm-2">
+            <button
+              type="button"
+              class="btn btn-add"
+              onclick="addEnvironment()"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Environments Grid -->
+      <div class="env-grid" id="envGrid">
+        <!-- Environment panes will be dynamically added here -->
+      </div>
+    </div>
+
+    <script>
+      function addEnvironment() {
+        var envInput = document.getElementById("environment");
+        var envName = envInput.value.trim();
+
+        if (envName === "") {
+          return; // Do nothing if the textbox is empty
+        }
+
+        // Check if the environment already exists
+        var existingEnvs = document.querySelectorAll(".env-pane span");
+        for (var i = 0; i < existingEnvs.length; i++) {
+          if (
+            existingEnvs[i].textContent.toLowerCase() === envName.toLowerCase()
+          ) {
+            return; // Do nothing if the environment already exists
+          }
+        }
+
+        // Make a POST request to add the environment
+        $.ajax({
+          url: "/envs",
+          type: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({ env: envName }),
+          success: function (response) {
+            // Clear the input field
+            envInput.value = "";
+            // Refresh the environment list
+            window.location.reload(true);
+          },
+        });
+      }
+
+      function deleteEnvironment(button) {
+        var envPane = button.closest(".env-pane");
+        var envId = envPane.getAttribute("data-id");
+
+        // Make a DELETE request to remove the environment
+        $.ajax({
+          url: "/envs/" + envId,
+          type: "DELETE",
+          success: function () {
+            // Remove the environment pane from the grid
+            envPane.remove();
+
+            // Refresh the environment list
+            window.location.reload(true);
+          },
+        });
+      }
+
+      function searchEnvironment() {
+        var envInput = document.getElementById("environment");
+        var environments = JSON.parse(
+          document.getElementById("environments").value
+        );
+        var searchText = envInput.value.trim().toLowerCase();
+
+        // Filter environments based on the search text
+        var filteredEnvironments = environments.filter(function (env) {
+          return env.env.toLowerCase().startsWith(searchText);
+        });
+        // Clear the current grid
+        var envGrid = document.getElementById("envGrid");
+        envGrid.innerHTML = "";
+
+        // Add the filtered environments to the grid
+        filteredEnvironments.forEach(function (env) {
+          var envPane = document.createElement("div");
+          envPane.className = "env-pane";
+          envPane.setAttribute("data-id", env.id);
+          envPane.setAttribute("onclick", 'openServiceList("' + env.env + '")');
+          envPane.innerHTML = `
+                        <button class="delete-btn" onclick="deleteEnvironment(this)">X</button>
+                        <span>${env.env}</span>
+                    `;
+          envGrid.appendChild(envPane);
+        });
+      }
+
+      function loadEnvironments() {
+        // Make a GET request to load all environments
+        //$.ajax({
+        //  url: "/api/envs",
+        //  type: "GET",
+        //  success: function (response) {
+        var envs = JSON.parse(document.getElementById("environments").value);
+        // Clear the current grid
+        var envGrid = document.getElementById("envGrid");
+        envGrid.innerHTML = "";
+
+        // Add all environments to the grid
+        envs.forEach(function (env) {
+          var envPane = document.createElement("div");
+          envPane.className = "env-pane";
+          envPane.setAttribute("data-id", env.id);
+          envPane.setAttribute("onclick", 'openServiceList("' + env.env + '")');
+          envPane.innerHTML = `
+                            <button class="delete-btn" onclick="deleteEnvironment(this)">X</button>
+                            <span>${env.env}</span>
+                        `;
+          envGrid.appendChild(envPane);
+        });
+        //},
+        //});
+      }
+
+      function openServiceList(env) {
+        window.location.href = "/envs/" + env + "/services";
+      }
+
+      // Load all environments on page load
+      document.addEventListener("DOMContentLoaded", loadEnvironments);
+    </script>
+  </body>
+</html>

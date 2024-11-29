@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <title>Service List</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" th:href="@{/css/mock-service.css}" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <br />
+      <div class="row">
+        <div class="col">
+          <a class="no-highlight-link" href="/envs"
+            ><h1 id="envName" class="text-left" th:text="${env}" />
+          </a>
+          <input type="hidden" id="services" th:value="${services}" />
+        </div>
+        <div class="col text-right">
+          <button
+            type="button"
+            class="btn btn-add"
+            onclick="navigateToAddMockService()"
+          >
+            Add Mock
+          </button>
+        </div>
+      </div>
+      <hr />
+      <div class="service-grid" id="serviceGrid">
+        <!-- Service panes will be dynamically added here -->
+      </div>
+      <div id="noServicesMessage" class="text-center" style="display: none">
+        No Services found
+      </div>
+    </div>
+
+    <script>
+      function loadServices() {
+        var env = document.getElementById("envName").textContent;
+        var services = JSON.parse(document.getElementById("services").value);
+
+        // Clear the current grid
+        var serviceGrid = document.getElementById("serviceGrid");
+        serviceGrid.innerHTML = "";
+
+        if (services.length === 0) {
+          document.getElementById("noServicesMessage").style.display = "block";
+        } else {
+          document.getElementById("noServicesMessage").style.display = "none";
+          // Add the services to the grid
+          services.forEach(function (service) {
+            var servicePane = document.createElement("div");
+            servicePane.className = "service-pane";
+            servicePane.innerHTML = `
+                                <div class="service-list"><span class="http-method left-aligned">${service.httpMethod}</span>
+                                  <span class="left-aligned">${service.url}</span></div>
+                                <div class="service-actions">
+                                    <button class="edit-btn" onclick="editService('${service.id}')">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button class="delete-btn" onclick="deleteService('${service.id}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            `;
+            serviceGrid.appendChild(servicePane);
+          });
+        }
+      }
+
+      function navigateToAddMockService() {
+        var env = document.getElementById("envName").textContent;
+        window.location.href = "/envs/" + env + "/services/create";
+      }
+
+      function editService(serviceId) {
+        var env = document.getElementById("envName").textContent;
+        window.location.href = "/envs/" + env + "/services/" + serviceId;
+      }
+
+      function deleteService(serviceId) {
+        var env = document.getElementById("envName").textContent;
+
+        // Make a DELETE request to remove the service
+        $.ajax({
+          url: "/envs/" + env + "/services/" + serviceId,
+          type: "DELETE",
+          success: function () {
+            // Refresh the service list
+            window.location.reload(true);
+          },
+        });
+      }
+
+      // Load services on page load
+      document.addEventListener("DOMContentLoaded", loadServices);
+    </script>
+  </body>
+</html>

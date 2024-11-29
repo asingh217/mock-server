@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <title>Mock Service Configuration</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" th:href="@{/css/mock-service.css}" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.5.3/ace.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Mock Service Configuration</h1>
+      <form id="serviceForm">
+        <input
+          type="hidden"
+          id="mockServiceJson"
+          name="mockServiceJson"
+          th:value="${mockService}"
+        />
+        <input type="hidden" id="id" name="id" />
+        <!-- URL Textbox -->
+        <div class="form-group">
+          <label for="env">Environment</label>
+          <input
+            type="text"
+            class="form-control"
+            id="env"
+            name="env"
+            th:value="${env}"
+            required
+            disabled
+          />
+        </div>
+
+        <!-- URL Textbox -->
+        <div class="form-group">
+          <label for="url">URL</label>
+          <input
+            type="text"
+            class="form-control"
+            id="url"
+            name="url"
+            required
+          />
+        </div>
+
+        <!-- HTTP Method List -->
+        <div class="form-group">
+          <label for="statusCode">HTTP Method</label>
+          <select class="form-control" id="statusCode" name="statusCode">
+            <option>200</option>
+            <option>201</option>
+            <option>202</option>
+            <option>400</option>
+            <option>404</option>
+            <option>500</option>
+          </select>
+        </div>
+
+        <!-- HTTP Method List -->
+        <div class="form-group">
+          <label for="httpMethod">HTTP Method</label>
+          <select class="form-control" id="httpMethod" name="httpMethod">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+          </select>
+        </div>
+
+        <!-- Response Headers Section -->
+        <div class="form-group">
+          <label>Response Headers</label>
+          <div id="responseHeaders">
+            <div class="form-row align-items-center header-row">
+              <div class="col">
+                <input
+                  type="text"
+                  class="form-control"
+                  name="headerName"
+                  placeholder="Header Name"
+                />
+              </div>
+              <div class="col">
+                <input
+                  type="text"
+                  class="form-control"
+                  name="headerValue"
+                  placeholder="Header Value"
+                />
+              </div>
+              <div class="col-auto">
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  onclick="removeHeader(this)"
+                >
+                  X
+                </button>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn btn-secondary add-header-btn"
+            onclick="addHeader()"
+          >
+            +
+          </button>
+        </div>
+
+        <!-- Response Body Section -->
+        <div class="form-group">
+          <label>Response Body</label>
+          <ul class="nav nav-tabs" id="responseBodyTab" role="tablist">
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                id="static"
+                data-toggle="tab"
+                href="#static-textarea"
+                role="tab"
+                aria-controls="static"
+                aria-selected="true"
+                >Static</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                id="dynamic"
+                data-toggle="tab"
+                href="#dynamic-textarea"
+                role="tab"
+                aria-controls="dynamic"
+                aria-selected="false"
+                >Dynamic</a
+              >
+            </li>
+          </ul>
+          <div class="tab-content" id="responseBodyTabContent">
+            <div
+              class="tab-pane fade show active"
+              id="static-textarea"
+              role="tabpanel"
+              aria-labelledby="static-tab"
+            >
+              <textarea
+                class="form-control"
+                rows="5"
+                placeholder="Static Response Body"
+              ></textarea>
+            </div>
+            <div
+              class="tab-pane fade"
+              id="dynamic-textarea"
+              role="tabpanel"
+              aria-labelledby="dynamic-tab"
+            >
+              <div class="editor-container">
+                <div id="editor">// Add Code in javascript</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save and Cancel Buttons -->
+        <button type="button" class="btn btn-primary" onclick="saveService()">
+          Save
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="cancel()">
+          Cancel
+        </button>
+      </form>
+    </div>
+
+    <script>
+      function addHeader() {
+        var headerRow = `
+                <div class="form-row align-items-center header-row">
+                    <div class="col">
+                        <input type="text" class="form-control" name="headerName" placeholder="Header Name">
+                    </div>
+                    <div class="col">
+                        <input type="text" class="form-control" name="headerValue" placeholder="Header Value">
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-danger" onclick="removeHeader(this)">X</button>
+                    </div>
+                </div>`;
+        document
+          .getElementById("responseHeaders")
+          .insertAdjacentHTML("beforeend", headerRow);
+      }
+
+      function removeHeader(button) {
+        button.closest(".form-row").remove();
+      }
+
+      function saveService() {
+        var id = document.getElementById("id").value;
+        var env = document.getElementById("env").value;
+        var url = document.getElementById("url").value;
+        var statusCode = document.getElementById("statusCode").value;
+        var httpMethod = document.getElementById("httpMethod").value;
+        var responseHeaders = {};
+        document
+          .querySelectorAll("#responseHeaders .header-row")
+          .forEach(function (row) {
+            var headerName = row.querySelector(
+              'input[placeholder="Header Name"]'
+            ).value;
+            var headerValue = row.querySelector(
+              'input[placeholder="Header Value"]'
+            ).value;
+            if (headerName && headerValue) {
+              responseHeaders[headerName] = headerValue;
+            }
+          });
+        var responseBodyType = document.querySelector(
+          "#responseBodyTab .nav-link.active"
+        ).id;
+        var responseBody = document.querySelector(
+          "#responseBodyTabContent .tab-pane.active textarea"
+        ).value;
+        if (responseBodyType == "dynamic") {
+          var editor = ace.edit("editor");
+          responseBody = editor.getValue();
+        }
+
+        var serviceData = {
+          env: env,
+          url: url,
+          statusCode: statusCode,
+          httpMethod: httpMethod,
+          responseHeaders: responseHeaders,
+          responseBodyType: responseBodyType,
+          responseBody: responseBody,
+        };
+
+        // Make a PUT request to add the service
+        $.ajax({
+          url: "/envs/" + env + "/services/" + id,
+          type: "PUT",
+          contentType: "application/json",
+          data: JSON.stringify(serviceData),
+          success: function () {
+            // Navigate back to the service list page
+            window.location.href = "/envs/" + env + "/services";
+          },
+        });
+      }
+
+      function cancel() {
+        var env = document.getElementById("env").value;
+        window.location.href = "/envs/" + env + "/services";
+      }
+
+      function loadEditor(script) {
+        var editor = document.querySelector("#editor");
+
+        var editorInstance = ace.edit(editor, {
+          theme: "ace/theme/xcode",
+          mode: "ace/mode/javascript",
+        });
+        editorInstance.setValue(script);
+      }
+
+      function loadMockService() {
+        var env = document.getElementById("env").value;
+        var mockServiceJson = JSON.parse(
+          document.getElementById("mockServiceJson").value
+        );
+        console.log(mockServiceJson);
+        document.getElementById("id").value = mockServiceJson.id;
+        document.getElementById("url").value = mockServiceJson.url;
+        document.getElementById("statusCode").value =
+          mockServiceJson.statusCode;
+        document.getElementById("httpMethod").value =
+          mockServiceJson.httpMethod;
+        document.getElementById(mockServiceJson.responseBodyType).click();
+        if (mockServiceJson.responseBodyType == "static") {
+          document.querySelector(
+            "#responseBodyTabContent .tab-pane.active textarea"
+          ).value = mockServiceJson.responseBody;
+        } else {
+          loadEditor(mockServiceJson.responseBody);
+        }
+        var index = 0;
+        var headerMap = mockServiceJson.responseHeaders;
+        for (var key in headerMap) {
+          addHeader();
+          var headerName = key;
+          var headerValue = headerMap[headerName];
+          console.log(headerName + " : " + headerValue);
+          document.getElementsByName("headerName")[index].value = headerName;
+          document.getElementsByName("headerValue")[index].value = headerValue;
+          index++;
+        }
+
+        // Make a GET request to load services for the environment
+      }
+
+      // Load services on page load
+      document.addEventListener("DOMContentLoaded", loadMockService);
+    </script>
+  </body>
+</html>
